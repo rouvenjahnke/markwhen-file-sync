@@ -29,7 +29,7 @@ If you encounter any issues or have suggestions, please open an issue on GitHub.
 MIT License
 
 
-%%
+<!--
 # Milestone Timeline Sync for Obsidian
 
 A plugin for Obsidian that synchronizes milestone notes with Markwhen timeline files.
@@ -85,4 +85,4 @@ A plugin for Obsidian that synchronizes milestone notes with Markwhen timeline f
    Status: in-progress
    Jahresziel: "[[Your Goal]]"
    ---
-   %%
+   -->
