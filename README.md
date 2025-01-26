@@ -8,6 +8,8 @@ Synchronize Properties from your Obsidian notes with Markwhen timeline files.
 - Auto-sync capability
 - Status tag support
 
+A use case could be goal planning and than the visualization of the projects and milestones via markwhen, see for more informations mei [Medium-Article](https://medium.com/@jahnke.rouven/a-multi-level-goal-planning-system-using-obsidian-29b94acd22f8).
+
 [more details follow as soon as possible]
 
 ## Installation
