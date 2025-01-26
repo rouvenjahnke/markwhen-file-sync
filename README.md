@@ -1,3 +1,13 @@
+
+***This plugin is not finish yet!***
+***Please wait with downloading, currently I am working on it!***
+***I think I'l finished it in the next week (until 02.02.25)!***
+***Thank you!***
+
+---
+---
+---
+
 # Markwhen-File-Sync
 Synchronize Properties from your Obsidian notes with Markwhen timeline files.
 
