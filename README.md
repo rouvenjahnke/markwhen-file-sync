@@ -9,7 +9,7 @@
 ---
 
 # Markwhen-File-Sync
-Synchronize Properties from your Obsidian notes with Markwhen timeline files.
+Synchronize Properties from your Obsidian notes with [Markwhen](https://github.com/mark-when/obsidian-plugin) timeline files.
 
 ## Features
 - Bidirectional synchronization
