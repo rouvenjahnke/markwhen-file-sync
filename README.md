@@ -9,6 +9,7 @@
 ---
 
 # Markwhen-File-Sync
+*This is an [Obsidian](https://obsidian.md/) plugin.*
 Synchronize Properties from your Obsidian notes with [Markwhen](https://github.com/mark-when/obsidian-plugin) timeline files.
 
 ## Features
