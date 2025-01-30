@@ -1,14 +1,5 @@
 
-***This plugin is not finish yet!***
-***Please wait with downloading, currently I am working on it!***
-***I think I'l finished it in the next week (until 02.02.25)!***
-***Thank you!***
-
----
----
----
-
-# Markwhen-File-Sync
+# Markwhen File Sync
 *This is an [Obsidian](https://obsidian.md/) plugin.*
 
 Synchronize Properties from your Obsidian notes with [Markwhen](https://github.com/mark-when/obsidian-plugin) timeline files.
@@ -22,19 +13,49 @@ Synchronize Properties from your Obsidian notes with [Markwhen](https://github.c
 
 A use case could be goal planning and than the visualization of the projects and milestones via markwhen, see for more informations mei [Medium-Article](https://medium.com/@jahnke.rouven/a-multi-level-goal-planning-system-using-obsidian-29b94acd22f8).
 
-[more details follow as soon as possible]
 
 ## Installation
 1. Open Obsidian Settings
-2. Go to Community Plugins
-3. Search for "Markwhen-File-Sync"
+3. Search for "Markwhen File Sync"
 4. Install and Enable
 
-## Usage
-[tbc]
+## Settings
+1. Set the *timeline file path* to the path to the markwhen-timeline (include .mw)
+2. Set the *notes folder path* to the path from the folder in which you have your notes, which you want to synchronize with the Markwhen-Timeline-File.
+3. Enable or disable the bidirectional synchronization.
+   - if you enable it, than the *date* and *endDate* will synchronize from the notes to the timeline and the opposite direction
+   - if you disable it, than the synchronization will synchronize only from tthe notes to the timeline
+4. In the next step you have to set the name of the tag-property in your notes (usually *tags*)
+5. Than choose tags which are required for the notes (currently you can't leave it empty, *I'll modify it as soon as possible*)
+6. Than you can choose a property to group the files (for each different value of this property it is another group)
+7. Than you can also choose a property, such that the value of this is a tag to the Markwhen-Events in the timeline-note (you can leave it empty)
 
-## Configuration
-[tbc]
+**The format of the properties for the dates in the notes are based on the format from *Full Calendar*, so the start-date ist: *date* and the end-date is: *endDate*.**
+
+*the other settings are not so important and self-explanatory*
+
+## Usage
+To use the synchronization you have to create notes in the notes-folder. For example:
+![image](https://github.com/user-attachments/assets/709820bd-9abb-4d80-909a-9e523d2685ed)
+
+If you have already a Markwhen-Timeline-note than you can toggle the synchronization with *Sync Timeline*-button on the left bar.
+
+So than you have the synchronisation between the notes and the timeline-note.
+Only the *dates* will synchronizate, the tags as well as the groups are **not synchronized**.
+
+### Example
+You have this notes:
+![Screenshot 2025-01-30 172624](https://github.com/user-attachments/assets/c958dbb3-4ca3-4ee0-bd3f-47c94a08a8f5)
+
+and
+![Screenshot 2025-01-30 172604](https://github.com/user-attachments/assets/cb850b8e-cb44-449c-978b-44010e7785e6)
+So than you can toggl the synchronization:
+![image](https://github.com/user-attachments/assets/36e9c642-ec87-413e-af48-2cd7ff117f11)
+Than the makrwhen-note going to be updated:
+![Screenshot 2025-01-30 172701](https://github.com/user-attachments/assets/fc65278f-8e44-4d91-a312-d6b240acd82f)
+and you can see the timeline:
+![Screenshot 2025-01-30 172724](https://github.com/user-attachments/assets/37b6603f-75b4-4bbf-bb32-526831185c97)
+
 
 ## Support
 If you encounter any issues or have suggestions, please open an issue on GitHub.
