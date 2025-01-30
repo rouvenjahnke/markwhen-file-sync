@@ -1,34 +1,29 @@
-'use strict';
+﻿'use strict';
 
-const { Plugin, PluginSettingTab, Setting, Notice } = require('obsidian');
+var obsidian = require('obsidian');
 
-// Settings Definition
-class MilestoneTimelineSyncSettings {
+class MarkwhenSyncSettings {
     constructor() {
-        // Basic Paths
-        this.markwhenPath = '3_Areas/02_Zielsetzung/Zielsetzung (Meilensteine).mw';
-        this.milestonesPath = '3_Areas/02_Zielsetzung/Meilensteine';
-
-        // Sync Options
+        this.markwhenPath = 'timeline.mw';
+        this.notesFolderPath = 'notes';
         this.enableBidirectionalSync = true;
         this.enableAutoSync = false;
-        this.autoSyncInterval = '60'; // seconds
+        this.autoSyncInterval = '60';
+        this.customProperty = 'status';
 
-        // Tag Configuration
         this.tagConfig = {
-            tags: ['goal', 'focus'],
+            propertyName: 'tags',
+            tags: [],
             requireAllTags: false
         };
 
-        // Grouping Settings
         this.groupingConfig = {
-            enabled: true,
-            propertyName: 'Jahresziel',
-            sortBy: 'number', // 'number', 'alpha', 'date'
-            sortEntriesBy: 'date' // 'date', 'alpha'
+            enabled: false,
+            propertyName: 'group',
+            sortBy: 'date',
+            sortEntriesBy: 'date'
         };
 
-        // Formatting Options
         this.formattingConfig = {
             showStatusTags: true,
             dateFormat: 'YYYY-MM-DD',
@@ -36,102 +31,90 @@ class MilestoneTimelineSyncSettings {
             groupEndText: 'end group'
         };
 
-        // Filter Options
         this.filterConfig = {
-            excludeStatus: ['done'],
+            excludeStatus: [],
             enableDateFilter: false,
-            dateFilterType: 'all', // 'all', 'future', 'current'
+            dateFilterType: 'all',
             excludeFolders: []
         };
 
-        // Notification Settings
         this.notificationConfig = {
             enabled: true,
-            detailLevel: 'normal', // 'minimal', 'normal', 'detailed'
+            detailLevel: 'normal',
             showErrors: true
         };
 
-        // Debug Options
         this.debugConfig = {
             enabled: false,
-            logLevel: 'error', // 'error', 'warn', 'info', 'debug'
+            logLevel: 'error',
             dryRun: false
         };
     }
 }
 
-// Settings Tab Implementation
-class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
+class MarkwhenSyncSettingTab extends obsidian.PluginSettingTab {
     constructor(app, plugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
 
     display() {
-        const {containerEl} = this;
+        const { containerEl } = this;
         containerEl.empty();
 
-        // Basic Settings
-        containerEl.createEl('h2', {text: 'Basic Settings'});
+        containerEl.createEl('h2', { text: 'Basic Settings' });
         this.addBasicSettings(containerEl);
 
-        // Sync Settings
-        containerEl.createEl('h2', {text: 'Synchronization Settings'});
+        containerEl.createEl('h2', { text: 'Synchronization Settings' });
         this.addSyncSettings(containerEl);
 
-        // Tag Settings
-        containerEl.createEl('h2', {text: 'Tag Configuration'});
+        containerEl.createEl('h2', { text: 'Tag Configuration' });
         this.addTagSettings(containerEl);
 
-        // Grouping Settings
-        containerEl.createEl('h2', {text: 'Grouping Settings'});
+        containerEl.createEl('h2', { text: 'Grouping Settings' });
         this.addGroupingSettings(containerEl);
 
-        // Format Settings
-        containerEl.createEl('h2', {text: 'Format Settings'});
+        containerEl.createEl('h2', { text: 'Format Settings' });
         this.addFormatSettings(containerEl);
 
-        // Filter Settings
-        containerEl.createEl('h2', {text: 'Filter Settings'});
+        containerEl.createEl('h2', { text: 'Filter Settings' });
         this.addFilterSettings(containerEl);
 
-        // Notification Settings
-        containerEl.createEl('h2', {text: 'Notification Settings'});
+        containerEl.createEl('h2', { text: 'Notification Settings' });
         this.addNotificationSettings(containerEl);
 
-        // Debug Settings
-        containerEl.createEl('h2', {text: 'Debug Settings'});
+        containerEl.createEl('h2', { text: 'Debug Settings' });
         this.addDebugSettings(containerEl);
     }
-// Settings Tab Methods
+
     addBasicSettings(containerEl) {
-        new Setting(containerEl)
-            .setName('Markwhen file path')
+        new obsidian.Setting(containerEl)
+            .setName('Timeline file path')
             .setDesc('Path to your Markwhen timeline file')
             .addText(text => text
-                .setPlaceholder('path/to/timeline.mw')
+                .setPlaceholder('timeline.mw')
                 .setValue(this.plugin.settings.markwhenPath)
                 .onChange(async (value) => {
                     this.plugin.settings.markwhenPath = value;
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Milestones folder path')
-            .setDesc('Path to your milestones folder')
+        new obsidian.Setting(containerEl)
+            .setName('Notes folder path')
+            .setDesc('Path to your notes folder')
             .addText(text => text
-                .setPlaceholder('path/to/milestones')
-                .setValue(this.plugin.settings.milestonesPath)
+                .setPlaceholder('notes')
+                .setValue(this.plugin.settings.notesFolderPath)
                 .onChange(async (value) => {
-                    this.plugin.settings.milestonesPath = value;
+                    this.plugin.settings.notesFolderPath = value;
                     await this.plugin.saveSettings();
                 }));
     }
 
     addSyncSettings(containerEl) {
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Enable bidirectional sync')
-            .setDesc('Sync changes in both directions')
+            .setDesc('Sync changes in both directions, otherwise the synchronisations is only from the notes to the timeline')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.enableBidirectionalSync)
                 .onChange(async (value) => {
@@ -139,7 +122,7 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Enable auto sync')
             .setDesc('Automatically sync when files change')
             .addToggle(toggle => toggle
@@ -147,11 +130,12 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                 .onChange(async (value) => {
                     this.plugin.settings.enableAutoSync = value;
                     await this.plugin.saveSettings();
+                    this.plugin.setupAutoSync();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Auto sync interval')
-            .setDesc('Interval in seconds for auto sync (if enabled)')
+            .setDesc('Interval in seconds for auto sync')
             .addText(text => text
                 .setPlaceholder('60')
                 .setValue(this.plugin.settings.autoSyncInterval)
@@ -159,23 +143,34 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                     if (!isNaN(value) && parseInt(value) > 0) {
                         this.plugin.settings.autoSyncInterval = value;
                         await this.plugin.saveSettings();
+                        this.plugin.setupAutoSync();
                     }
                 }));
     }
-
     addTagSettings(containerEl) {
-        new Setting(containerEl)
-            .setName('Milestone tags')
-            .setDesc('Tags to identify milestone files (comma-separated)')
+        new obsidian.Setting(containerEl)
+            .setName('Tags property name')
+            .setDesc('Name of the frontmatter property that contains tags')
             .addText(text => text
-                .setPlaceholder('goal, focus')
+                .setPlaceholder('tags')
+                .setValue(this.plugin.settings.tagConfig.propertyName)
+                .onChange(async (value) => {
+                    this.plugin.settings.tagConfig.propertyName = value;
+                    await this.plugin.saveSettings();
+                }));
+
+        new obsidian.Setting(containerEl)
+            .setName('Required tags')
+            .setDesc('Tags required for sync (comma-separated)')
+            .addText(text => text
+                .setPlaceholder('tag1, tag2')
                 .setValue(this.plugin.settings.tagConfig.tags.join(', '))
                 .onChange(async (value) => {
                     this.plugin.settings.tagConfig.tags = value.split(',').map(t => t.trim());
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Require all tags')
             .setDesc('Require all specified tags (instead of any)')
             .addToggle(toggle => toggle
@@ -187,9 +182,9 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
     }
 
     addGroupingSettings(containerEl) {
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Enable grouping')
-            .setDesc('Group milestones in timeline')
+            .setDesc('Group entries in timeline')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.groupingConfig.enabled)
                 .onChange(async (value) => {
@@ -197,31 +192,31 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Grouping property')
-            .setDesc('Property name used for grouping')
+            .setDesc('Property name for grouping')
             .addText(text => text
-                .setPlaceholder('Jahresziel')
+                .setPlaceholder('group')
                 .setValue(this.plugin.settings.groupingConfig.propertyName)
                 .onChange(async (value) => {
                     this.plugin.settings.groupingConfig.propertyName = value;
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Group sort method')
             .setDesc('How to sort the groups')
             .addDropdown(dropdown => dropdown
-                .addOption('number', 'By Number')
-                .addOption('alpha', 'Alphabetically')
                 .addOption('date', 'By Date')
+                .addOption('alpha', 'Alphabetically')
+                .addOption('number', 'By Number')
                 .setValue(this.plugin.settings.groupingConfig.sortBy)
                 .onChange(async (value) => {
                     this.plugin.settings.groupingConfig.sortBy = value;
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Entry sort method')
             .setDesc('How to sort entries within groups')
             .addDropdown(dropdown => dropdown
@@ -235,7 +230,7 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
     }
 
     addFormatSettings(containerEl) {
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Show status tags')
             .setDesc('Show status as tags in timeline')
             .addToggle(toggle => toggle
@@ -245,7 +240,7 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Date format')
             .setDesc('Format for dates in timeline')
             .addText(text => text
@@ -256,32 +251,22 @@ class MilestoneTimelineSyncSettingTab extends PluginSettingTab {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Group start text')
-            .setDesc('Text used to start a group')
+        new obsidian.Setting(containerEl)
+            .setName('Custom Property')
+            .setDesc('Name of the custom frontmatter property to use for tags in timeline')
             .addText(text => text
-                .setPlaceholder('group')
-                .setValue(this.plugin.settings.formattingConfig.groupStartText)
+                .setPlaceholder('status')
+                .setValue(this.plugin.settings.customProperty)
                 .onChange(async (value) => {
-                    this.plugin.settings.formattingConfig.groupStartText = value;
-                    await this.plugin.saveSettings();
-                }));
-
-        new Setting(containerEl)
-            .setName('Group end text')
-            .setDesc('Text used to end a group')
-            .addText(text => text
-                .setPlaceholder('end group')
-                .setValue(this.plugin.settings.formattingConfig.groupEndText)
-                .onChange(async (value) => {
-                    this.plugin.settings.formattingConfig.groupEndText = value;
+                    this.plugin.settings.customProperty = value;
                     await this.plugin.saveSettings();
                 }));
     }
-addFilterSettings(containerEl) {
-        new Setting(containerEl)
-            .setName('Excluded status values')
-            .setDesc('Status values to exclude (comma-separated)')
+
+    addFilterSettings(containerEl) {
+        new obsidian.Setting(containerEl)
+            .setName('Excluded property value')
+            .setDesc('Property values to exclude (comma-separated)')
             .addText(text => text
                 .setPlaceholder('done, cancelled')
                 .setValue(this.plugin.settings.filterConfig.excludeStatus.join(', '))
@@ -290,9 +275,9 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Enable date filtering')
-            .setDesc('Filter milestones based on dates')
+        new obsidian.Setting(containerEl)
+            .setName('Enable date filter')
+            .setDesc('Filter entries based on dates')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.filterConfig.enableDateFilter)
                 .onChange(async (value) => {
@@ -300,9 +285,9 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Date filter type')
-            .setDesc('Which milestones to include based on date')
+            .setDesc('Which entries to include based on date')
             .addDropdown(dropdown => dropdown
                 .addOption('all', 'All')
                 .addOption('future', 'Future only')
@@ -313,7 +298,7 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Excluded folders')
             .setDesc('Subfolders to exclude (comma-separated)')
             .addText(text => text
@@ -326,7 +311,7 @@ addFilterSettings(containerEl) {
     }
 
     addNotificationSettings(containerEl) {
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Enable notifications')
             .setDesc('Show notification popups')
             .addToggle(toggle => toggle
@@ -336,8 +321,8 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Notification detail level')
+        new obsidian.Setting(containerEl)
+            .setName('Detail level')
             .setDesc('How detailed should notifications be')
             .addDropdown(dropdown => dropdown
                 .addOption('minimal', 'Minimal')
@@ -349,9 +334,9 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
-            .setName('Show error notifications')
-            .setDesc('Show notifications for errors')
+        new obsidian.Setting(containerEl)
+            .setName('Show errors')
+            .setDesc('Show error notifications')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.notificationConfig.showErrors)
                 .onChange(async (value) => {
@@ -361,9 +346,9 @@ addFilterSettings(containerEl) {
     }
 
     addDebugSettings(containerEl) {
-        new Setting(containerEl)
-            .setName('Enable debug mode')
-            .setDesc('Enable detailed logging')
+        new obsidian.Setting(containerEl)
+            .setName('Debug mode')
+            .setDesc('Enable debug logging')
             .addToggle(toggle => toggle
                 .setValue(this.plugin.settings.debugConfig.enabled)
                 .onChange(async (value) => {
@@ -371,9 +356,9 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Log level')
-            .setDesc('Level of detail for logging')
+            .setDesc('Level of debug logging')
             .addDropdown(dropdown => dropdown
                 .addOption('error', 'Errors only')
                 .addOption('warn', 'Warnings and errors')
@@ -385,7 +370,7 @@ addFilterSettings(containerEl) {
                     await this.plugin.saveSettings();
                 }));
 
-        new Setting(containerEl)
+        new obsidian.Setting(containerEl)
             .setName('Dry run')
             .setDesc('Simulate sync without making changes')
             .addToggle(toggle => toggle
@@ -397,404 +382,330 @@ addFilterSettings(containerEl) {
     }
 }
 
-class MilestoneTimelineSync extends Plugin {
+class MarkwhenSync extends obsidian.Plugin {
     async onload() {
-        console.log('Loading MilestoneTimelineSync');
+        this.lastSync = {
+            notes: new Map(),
+            timeline: ''
+        };
 
         await this.loadSettings();
 
-        // Add ribbon icon
-        this.addRibbonIcon('sync', 'Sync Milestones with Timeline', async () => {
+        this.addRibbonIcon('sync', 'Sync Timeline', async () => {
             await this.syncWithSettings();
         });
 
-        // Add settings tab
-        this.addSettingTab(new MilestoneTimelineSyncSettingTab(this.app, this));
+        this.addSettingTab(new MarkwhenSyncSettingTab(this.app, this));
 
-        // Setup auto sync if enabled
-        this.setupAutoSync();
+        if (this.settings.enableAutoSync) {
+            this.setupAutoSync();
+        }
+
+        this.registerEvent(
+            this.app.vault.on('modify', (file) => {
+                if (this.settings.enableAutoSync) {
+                    this.handleFileChange(file);
+                }
+            })
+        );
     }
 
     async loadSettings() {
-        this.settings = Object.assign(new MilestoneTimelineSyncSettings(), await this.loadData());
+        this.settings = Object.assign(new MarkwhenSyncSettings(), await this.loadData());
     }
 
     async saveSettings() {
         await this.saveData(this.settings);
-        this.setupAutoSync(); // Refresh auto sync when settings change
     }
 
     setupAutoSync() {
         if (this.autoSyncInterval) {
             clearInterval(this.autoSyncInterval);
-            this.autoSyncInterval = null;
         }
+        const interval = parseInt(this.settings.autoSyncInterval) * 1000;
+        this.autoSyncInterval = setInterval(() => this.syncWithSettings(), interval);
+    }
 
-        if (this.settings.enableAutoSync) {
-            const interval = parseInt(this.settings.autoSyncInterval) * 1000;
-            this.autoSyncInterval = setInterval(() => this.syncWithSettings(), interval);
+    async handleFileChange(file) {
+        if (file.path === this.settings.markwhenPath) {
+            await this.syncFromMarkwhen();
+        } else if (file.path.startsWith(this.settings.notesFolderPath)) {
+            await this.syncToMarkwhen();
         }
     }
-// Main sync function that uses settings
+
     async syncWithSettings() {
-        if (this.settings.debugConfig.enabled) {
-            this.log('Starting sync with current settings...', 'info');
+        await this.syncToMarkwhen();
+        if (this.settings.enableBidirectionalSync) {
+            await this.syncFromMarkwhen();
+        }
+    }
+
+    async collectEntries() {
+        const entries = [];
+        const notesFolder = this.app.vault.getAbstractFileByPath(this.settings.notesFolderPath);
+
+        if (!notesFolder) {
+            throw new Error('Notes folder not found');
         }
 
+        const scanFolder = async (folder) => {
+            for (const child of folder.children) {
+                if (child instanceof obsidian.TFile && child.extension === 'md') {
+                    const metadata = this.app.metadataCache.getFileCache(child)?.frontmatter;
+                    if (this.isValidEntry(metadata)) {
+                        entries.push({
+                            file: child,
+                            metadata: metadata,
+                            title: child.basename
+                        });
+                    }
+                } else if (child instanceof obsidian.TFolder) {
+                    if (!this.settings.filterConfig.excludeFolders.includes(child.name)) {
+                        await scanFolder(child);
+                    }
+                }
+            }
+        };
+
+        await scanFolder(notesFolder);
+        return entries;
+    }
+
+    formatDate(date, isEndDate = false) {
+        if (!date) return date;
+
+        if (/^\d{4}$/.test(date)) {
+            return isEndDate ? `${date}-12-31` : `${date}-01-01`;
+        }
+
+        if (/^\d{4}-\d{2}$/.test(date)) {
+            if (isEndDate) {
+                const [year, month] = date.split('-').map(Number);
+                const nextMonth = month === 12 ? '01' : String(month + 1).padStart(2, '0');
+                const nextYear = month === 12 ? year + 1 : year;
+                return `${nextYear}-${nextMonth}-01`;
+            }
+            return `${date}-01`;
+        }
+
+        return date;
+    }
+
+    async syncToMarkwhen() {
         try {
+            const entries = await this.collectEntries();
+            const newContent = await this.generateTimelineContent(entries);
+
             const markwhenFile = this.app.vault.getAbstractFileByPath(this.settings.markwhenPath);
-            const milestonesFolder = this.app.vault.getAbstractFileByPath(this.settings.milestonesPath);
-            
-            if (!markwhenFile || !milestonesFolder) {
-                this.showNotification('Required files not found', 'error');
+            if (!markwhenFile) return;
+
+            const currentContent = await this.app.vault.read(markwhenFile);
+
+            if (this.lastSync.timeline !== currentContent) {
                 return;
             }
 
-            // Read Timeline Events
-            const markwhenContent = await this.app.vault.read(markwhenFile);
-            const timelineEvents = this.parseTimelineEvents(markwhenContent);
-            const markwhenStat = await this.app.vault.adapter.stat(this.settings.markwhenPath);
-            
-            // Collect Milestone Events
-            const milestonesToSync = [];
-
-            for (const child of milestonesFolder.children) {
-                if (!this.shouldProcessFile(child)) continue;
-
-                const metadata = this.app.metadataCache.getFileCache(child)?.frontmatter;
-                if (!this.isValidMilestone(metadata)) continue;
-
-                const milestoneStat = await this.app.vault.adapter.stat(child.path);
-                const timelineEvent = timelineEvents.find(e => e.fileName === child.basename);
-                
-                if (await this.shouldUpdateMilestone(child, metadata, timelineEvent, milestoneStat, markwhenStat)) {
-                    milestonesToSync.push({
-                        file: child,
-                        metadata: metadata
-                    });
+            if (newContent.trim() !== currentContent.trim()) {
+                await this.app.vault.modify(markwhenFile, newContent.trim());
+                this.lastSync.timeline = newContent.trim();
+                if (this.settings.notificationConfig.enabled) {
+                    new obsidian.Notice('Timeline synchronized');
                 }
             }
-
-            // Group and sort milestones
-            const groupedMilestones = this.settings.groupingConfig.enabled
-                ? await this.groupMilestonesByProperty(milestonesToSync)
-                : new Map([['', milestonesToSync]]);
-
-            // Create new timeline content
-            let newContent = '';
-            for (const [groupName, milestones] of groupedMilestones) {
-                if (groupName && this.settings.groupingConfig.enabled) {
-                    newContent += `\n${this.settings.formattingConfig.groupStartText} ${groupName}\n`;
-                }
-                
-                const sortedMilestones = this.sortMilestones(milestones);
-                for (const milestone of sortedMilestones) {
-                    newContent += this.formatMilestoneEntry(milestone);
-                }
-                
-                if (groupName && this.settings.groupingConfig.enabled) {
-                    newContent += `${this.settings.formattingConfig.groupEndText}\n\n`;
-                }
-            }
-
-            // Update if not dry run
-            if (!this.settings.debugConfig.dryRun) {
-                if (newContent.trim() !== markwhenContent.trim()) {
-                    await this.app.vault.modify(markwhenFile, newContent.trim());
-                    this.showNotification('Timeline synchronized', 'success');
-                } else {
-                    this.showNotification('Everything already in sync', 'info');
-                }
-            } else {
-                this.log('Dry run - would update with:', 'info');
-                this.log(newContent, 'debug');
-            }
-
         } catch (error) {
-            this.handleError('Error in sync', error);
-        }
-    }
-
-    // Helper functions
-    shouldProcessFile(file) {
-        if (file.extension !== 'md') return false;
-        
-        // Check excluded folders
-        const relativePath = file.path.replace(this.settings.milestonesPath, '');
-        return !this.settings.filterConfig.excludeFolders
-            .some(folder => relativePath.startsWith(folder));
-    }
-
-    isValidMilestone(metadata) {
-        if (!metadata?.date || !metadata?.endDate || !metadata?.title) return false;
-        
-        // Check status
-        if (this.settings.filterConfig.excludeStatus.includes(metadata.Status)) return false;
-        
-        // Check tags
-        const fileTags = metadata.tags || [];
-        const requiredTags = this.settings.tagConfig.tags;
-        
-        if (this.settings.tagConfig.requireAllTags) {
-            return requiredTags.every(tag => fileTags.includes(tag));
-        } else {
-            return requiredTags.some(tag => fileTags.includes(tag));
-        }
-    }
-
-    async shouldUpdateMilestone(file, metadata, timelineEvent, milestoneStat, markwhenStat) {
-        if (!timelineEvent) return true;
-
-        const datesAreDifferent = metadata.date !== timelineEvent.startDate ||
-                                metadata.endDate !== timelineEvent.endDate;
-
-        if (datesAreDifferent) {
-            if (!this.settings.enableBidirectionalSync) {
-                return true;
-            }
-
-            return milestoneStat.mtime > markwhenStat.mtime;
-        }
-
-        return true; // Update for potential status changes
-    }
-
-    sortMilestones(milestones) {
-        const sortMethod = this.settings.groupingConfig.sortEntriesBy;
-        return [...milestones].sort((a, b) => {
-            if (sortMethod === 'date') {
-                return new Date(a.metadata.date) - new Date(b.metadata.date);
-            } else {
-                return a.metadata.title.localeCompare(b.metadata.title);
-            }
-        });
-    }
-
-    formatMilestoneEntry(milestone) {
-        let entry = `${milestone.metadata.date}/${milestone.metadata.endDate}: [[${milestone.file.basename}]]`;
-        
-        if (this.settings.formattingConfig.showStatusTags && milestone.metadata.Status) {
-            entry += ` #${milestone.metadata.Status.replace(/\s+/g, '-')}`;
-        }
-        
-        return entry + '\n';
-    }
-
-    // Logging and notification functions
-    log(message, level = 'info') {
-        if (!this.settings.debugConfig.enabled) return;
-        
-        const logLevels = ['error', 'warn', 'info', 'debug'];
-        const configLevel = logLevels.indexOf(this.settings.debugConfig.logLevel);
-        const messageLevel = logLevels.indexOf(level);
-
-        if (messageLevel <= configLevel) {
-            console[level](`[MilestoneTimelineSync] ${message}`);
-        }
-    }
-
-    showNotification(message, type = 'info') {
-        if (!this.settings.notificationConfig.enabled) return;
-        if (type === 'error' && !this.settings.notificationConfig.showErrors) return;
-
-        const detailLevel = this.settings.notificationConfig.detailLevel;
-        if (detailLevel === 'minimal' && type === 'info') return;
-
-        new Notice(message);
-    }
-
-    handleError(message, error) {
-        this.log(`${message}: ${error.message}`, 'error');
-        if (this.settings.debugConfig.enabled) {
-            console.error(error);
-        }
-        this.showNotification(`${message}: ${error.message}`, 'error');
-    }
-async groupMilestonesByProperty(milestones) {
-        const groupedMilestones = new Map();
-        const milestonesWithoutProperty = [];
-        const propertyName = this.settings.groupingConfig.propertyName;
-
-        for (const milestone of milestones) {
-            try {
-                let groupValue = await this.getGroupingProperty(milestone.file, propertyName);
-                
-                if (!groupValue) {
-                    milestonesWithoutProperty.push(milestone.file.basename);
-                    groupValue = 'Ungrouped';
-                }
-
-                if (!groupedMilestones.has(groupValue)) {
-                    groupedMilestones.set(groupValue, []);
-                }
-                groupedMilestones.get(groupValue).push(milestone);
-            } catch (error) {
-                this.handleError(`Error processing milestone ${milestone.file.path}`, error);
+            console.error('Sync to Markwhen error:', error);
+            if (this.settings.notificationConfig.showErrors) {
+                new obsidian.Notice('Error during synchronization to timeline');
             }
         }
+    }
 
-        if (milestonesWithoutProperty.length > 0) {
-            const message = `Missing ${propertyName} property in: ${milestonesWithoutProperty.join(', ')}`;
-            this.log(message, 'warn');
-            if (this.settings.notificationConfig.detailLevel === 'detailed') {
-                this.showNotification(message, 'warn');
+    async syncFromMarkwhen() {
+        try {
+            const markwhenFile = this.app.vault.getAbstractFileByPath(this.settings.markwhenPath);
+            if (!markwhenFile) return;
+
+            const content = await this.app.vault.read(markwhenFile);
+            const timelineEvents = this.parseMarkwhenContent(content);
+
+            for (const event of timelineEvents) {
+                await this.updateNoteFromEvent(event);
+            }
+
+            this.lastSync.timeline = content;
+        } catch (error) {
+            console.error('Sync from Markwhen error:', error);
+            if (this.settings.notificationConfig.showErrors) {
+                new obsidian.Notice('Error during synchronization from timeline');
             }
         }
-
-        // Sort groups based on settings
-        return this.sortGroups(groupedMilestones);
     }
 
-    async getGroupingProperty(file, propertyName) {
-        const content = await this.app.vault.read(file);
-        const propertyRegex = new RegExp(`${propertyName}:\\s*"?\\[\\[([^\\]|]+?)(?:\\|[^\\]]+?)?\\]\\]"?`);
-        const match = content.match(propertyRegex);
-        return match ? match[1].replace(/^.*?}/, '').trim() : null;
-    }
-
-    sortGroups(groupedMilestones) {
-        const sortMethod = this.settings.groupingConfig.sortBy;
-        const entries = Array.from(groupedMilestones.entries());
-
-        const sortedEntries = entries.sort((a, b) => {
-            const [groupA, milestonesA] = a;
-            const [groupB, milestonesB] = b;
-
-            if (groupA === 'Ungrouped') return 1;
-            if (groupB === 'Ungrouped') return -1;
-
-            switch (sortMethod) {
-                case 'number':
-                    const numA = parseFloat(groupA.match(/^\d+(\.\d+)?/)?.[0] || '0');
-                    const numB = parseFloat(groupB.match(/^\d+(\.\d+)?/)?.[0] || '0');
-                    return numA - numB || groupA.localeCompare(groupB);
-
-                case 'date':
-                    const dateA = Math.min(...milestonesA.map(m => new Date(m.metadata.date)));
-                    const dateB = Math.min(...milestonesB.map(m => new Date(m.metadata.date)));
-                    return dateA - dateB;
-
-                default: // 'alpha'
-                    return groupA.localeCompare(groupB);
-            }
-        });
-
-        return new Map(sortedEntries);
-    }
-
-    filterByDate(milestone) {
-        if (!this.settings.filterConfig.enableDateFilter) return true;
-
-        const today = new Date();
-        const startDate = new Date(milestone.metadata.date);
-        const endDate = new Date(milestone.metadata.endDate);
-
-        switch (this.settings.filterConfig.dateFilterType) {
-            case 'future':
-                return startDate >= today;
-            case 'current':
-                return startDate <= today && endDate >= today;
-            default:
-                return true;
-        }
-    }
-
-    parseTimelineEvents(content) {
+    parseMarkwhenContent(content) {
         const events = [];
         const lines = content.split('\n');
-        
+        let currentGroup = null;
+
         for (const line of lines) {
-            const match = line.match(/^(\d{4}(?:-\d{2}(?:-\d{2})?)??)\/(\d{4}(?:-\d{2}(?:-\d{2})?)?): \[\[(.+?)\]\]/);
-            if (match) {
-                events.push({
-                    startDate: match[1],
-                    endDate: match[2],
-                    fileName: match[3]
-                });
+            if (line.startsWith('group ')) {
+                currentGroup = line.substring(6).trim();
+            } else if (line === 'end group') {
+                currentGroup = null;
+            } else if (line.includes(':')) {
+                const [dateRange, title] = line.split(':').map(s => s.trim());
+                const [startDate, endDate] = dateRange.split('/').map(s => s.trim());
+                const noteName = title.match(/\[\[(.*?)\]\]/)?.[1];
+
+                if (noteName) {
+                    events.push({
+                        startDate,
+                        endDate,
+                        noteName,
+                        group: currentGroup,
+                        status: line.match(/#(\w+)/)?.[1]
+                    });
+                }
             }
         }
         return events;
     }
 
-    async updateMilestoneFile(file, metadata) {
-        if (!this.settings.enableBidirectionalSync) return;
-        if (this.settings.debugConfig.dryRun) {
-            this.log(`Would update milestone file: ${file.path}`, 'info');
-            return;
-        }
+    async updateNoteFromEvent(event) {
+        const notePath = `${this.settings.notesFolderPath}/${event.noteName}.md`;
+        const noteFile = this.app.vault.getAbstractFileByPath(notePath);
 
-        try {
-            const content = await this.app.vault.read(file);
-            const lines = content.split('\n');
-            let inFrontmatter = false;
-            let frontmatterStart = -1;
-            let frontmatterEnd = -1;
+        if (!noteFile) return;
 
-            for (let i = 0; i < lines.length; i++) {
-                if (lines[i].trim() === '---') {
-                    if (!inFrontmatter) {
-                        inFrontmatter = true;
-                        frontmatterStart = i;
-                    } else {
-                        frontmatterEnd = i;
-                        break;
-                    }
-                }
+        const content = await this.app.vault.read(noteFile);
+        const frontmatter = this.app.metadataCache.getFileCache(noteFile)?.frontmatter;
+
+        if (!frontmatter ||
+            frontmatter.date !== event.startDate ||
+            frontmatter.endDate !== event.endDate ||
+            (event.group && frontmatter[this.settings.groupingConfig.propertyName] !== event.group)) {
+
+            const newFrontmatter = {
+                ...frontmatter,
+                date: event.startDate,
+                endDate: event.endDate
+            };
+
+            if (event.group) {
+                newFrontmatter[this.settings.groupingConfig.propertyName] = event.group;
             }
 
-            if (frontmatterStart === -1 || frontmatterEnd === -1) {
-                throw new Error('Invalid frontmatter structure');
-            }
-
-            const currentFrontmatter = lines.slice(frontmatterStart + 1, frontmatterEnd);
-            const updatedFrontmatter = this.updateFrontmatterContent(currentFrontmatter, metadata);
-
-            const newContent = [
-                ...lines.slice(0, frontmatterStart + 1),
-                ...updatedFrontmatter,
-                ...lines.slice(frontmatterEnd)
-            ].join('\n');
-
-            await this.app.vault.modify(file, newContent);
-            this.log(`Updated milestone file: ${file.path}`, 'info');
-        } catch (error) {
-            this.handleError(`Error updating milestone file: ${file.path}`, error);
+            const newContent = this.updateFrontmatter(content, newFrontmatter);
+            await this.app.vault.modify(noteFile, newContent);
         }
     }
 
-    updateFrontmatterContent(currentFrontmatter, metadata) {
-        const updatedFrontmatter = [];
-        let dateUpdated = false;
-        let endDateUpdated = false;
+    updateFrontmatter(content, frontmatter) {
+        const yamlStr = '---\n' + Object.entries(frontmatter)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n') + '\n---';
 
-        for (const line of currentFrontmatter) {
-            if (line.startsWith('date:')) {
-                updatedFrontmatter.push(`date: ${metadata.date}`);
-                dateUpdated = true;
-            } else if (line.startsWith('endDate:')) {
-                updatedFrontmatter.push(`endDate: ${metadata.endDate}`);
-                endDateUpdated = true;
+        if (content.startsWith('---')) {
+            const endIndex = content.indexOf('---', 3) + 3;
+            return yamlStr + content.substring(endIndex);
+        }
+        return yamlStr + '\n' + content;
+    }
+
+    async generateTimelineContent(entries) {
+        let content = '';
+
+        if (this.settings.groupingConfig.enabled) {
+            const grouped = await this.groupEntries(entries);
+            for (const [group, groupEntries] of grouped) {
+                content += `\ngroup ${group}\n`;
+                content += this.formatEntries(groupEntries);
+                content += 'end group\n';
+            }
+        } else {
+            content = this.formatEntries(entries);
+        }
+
+        return content.trim();
+    }
+
+    async groupEntries(entries) {
+        const grouped = new Map();
+
+        for (const entry of entries) {
+            const groupValue = entry.metadata[this.settings.groupingConfig.propertyName] || 'Ungrouped';
+            if (!grouped.has(groupValue)) {
+                grouped.set(groupValue, []);
+            }
+            grouped.get(groupValue).push(entry);
+        }
+
+        return new Map([...grouped.entries()].sort((a, b) => {
+            if (this.settings.groupingConfig.sortBy === 'alpha') {
+                return a[0].localeCompare(b[0]);
+            } else if (this.settings.groupingConfig.sortBy === 'number') {
+                return parseInt(a[0]) - parseInt(b[0]);
+            }
+            return 0;
+        }));
+    }
+
+    formatEntries(entries) {
+        const sortedEntries = [...entries].sort((a, b) => {
+            if (this.settings.groupingConfig.sortEntriesBy === 'date') {
+                return new Date(a.metadata.date) - new Date(b.metadata.date);
+            } else if (this.settings.groupingConfig.sortEntriesBy === 'alpha') {
+                return a.title.localeCompare(b.title);
+            }
+            return 0;
+        });
+
+        let content = '';
+        for (const entry of sortedEntries) {
+            const startDate = this.formatDate(entry.metadata.date);
+            const endDate = this.formatDate(entry.metadata.endDate, true);
+            // Hier verwenden wir das customProperty anstelle des hartcodierten 'status'
+            const customPropertyValue = entry.metadata[this.settings.customProperty];
+            const statusTag = this.settings.formattingConfig.showStatusTags && customPropertyValue
+                ? ` #${customPropertyValue.replace(/\s+/g, '-')}`
+                : '';
+            content += `${startDate}/${endDate}: [[${entry.title}]]${statusTag}\n`;
+        }
+        return content;
+    }
+
+    isValidEntry(metadata) {
+        if (!metadata) return false;
+        if (!metadata.date || !metadata.endDate) return false;
+
+        // Hier verwenden wir das customProperty für die Status-Überprüfung
+        const customPropertyValue = metadata[this.settings.customProperty];
+        if (customPropertyValue && this.settings.filterConfig.excludeStatus.includes(customPropertyValue.toLowerCase())) {
+            return false;
+        }
+
+        const entryTags = metadata[this.settings.tagConfig.propertyName] || [];
+
+        if (this.settings.tagConfig.tags.length > 0) {
+            if (this.settings.tagConfig.requireAllTags) {
+                return this.settings.tagConfig.tags.every(tag =>
+                    Array.isArray(entryTags) ? entryTags.includes(tag) : entryTags === tag
+                );
             } else {
-                updatedFrontmatter.push(line);
+                return this.settings.tagConfig.tags.some(tag =>
+                    Array.isArray(entryTags) ? entryTags.includes(tag) : entryTags === tag
+                );
             }
         }
 
-        if (!dateUpdated) {
-            updatedFrontmatter.push(`date: ${metadata.date}`);
-        }
-        if (!endDateUpdated) {
-            updatedFrontmatter.push(`endDate: ${metadata.endDate}`);
-        }
-
-        return updatedFrontmatter;
+        return true;
     }
 
     onunload() {
-        console.log('Unloading MilestoneTimelineSync');
         if (this.autoSyncInterval) {
             clearInterval(this.autoSyncInterval);
         }
     }
 }
 
-module.exports = MilestoneTimelineSync;
+module.exports = MarkwhenSync;
