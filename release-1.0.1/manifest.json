@@ -1,0 +1,10 @@
+{
+    "id": "markfilesync",
+    "name": "Markwhen File Sync",
+    "version": "1.0.1",
+    "minAppVersion": "1.7.0",
+    "description": "Synchronize properties from your notes with a Markwhen timeline file",
+    "author": "rpj-07",
+    "authorUrl": "https://github.com/rpj-07",
+    "isDesktopOnly": true
+}

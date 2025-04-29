@@ -1,0 +1,28 @@
+/* Plugin Styles */
+.milestone-timeline-sync-settings {
+    padding: 10px;
+}
+
+.milestone-timeline-sync-settings h2 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid var(--background-modifier-border);
+    padding-bottom: 8px;
+}
+
+.milestone-timeline-sync-settings h3 {
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.milestone-timeline-sync-warning {
+    color: var(--text-warning);
+}
+
+.milestone-timeline-sync-error {
+    color: var(--text-error);
+}
+
+.milestone-timeline-sync-success {
+    color: var(--text-success);
+}
