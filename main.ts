@@ -180,7 +180,6 @@ class MarkwhenSyncSettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// Basic section
-		new Setting(containerEl).setName('Basic').setHeading();
 		this.addBasicSettings(containerEl);
 
 		// Synchronization section
