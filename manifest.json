@@ -1,7 +1,7 @@
 {
     "id": "markfilesync",
     "name": "Markwhen File Sync",
-    "version": "1.0.1-beta",
+    "version": "1.1.0",
     "main": "dist/main.js",
     "minAppVersion": "1.7.0",
     "description": "Synchronize properties from your notes with a Markwhen timeline file",
