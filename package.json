@@ -1,6 +1,6 @@
 {
   "name": "markwhen-file-sync",
-  "version": "1.0.1-beta",
+  "version": "1.1.0",
   "description": "Synchronize Properties from your Obsidian notes with a Markwhen timeline file",
   "main": "dist/main.js",
   "scripts": {
