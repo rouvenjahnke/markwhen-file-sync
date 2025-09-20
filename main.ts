@@ -234,7 +234,7 @@ class MarkwhenSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Notes folder path')
-			.setDesc('Path to your notes folder')
+			.setDesc('Path to your notes folder (leave blank to sync entire vault)')
 			.addText(text => text
 				.setPlaceholder('notes')
 				.setValue(this.plugin.settings.notesFolderPath)
@@ -522,7 +522,7 @@ class MarkwhenSyncSettingTab extends PluginSettingTab {
 
 		new Setting(containerEl)
 			.setName('Excluded folders')
-			.setDesc('Subfolders to exclude (comma-separated, relative to Notes Folder Path)')
+			.setDesc('Subfolders to exclude (comma-separated, relative to Notes Folder Path; if blank, relative to vault root)')
 			.addText(text => text
 				.setPlaceholder('archive, temp')
 				.setValue(this.plugin.settings.filterConfig.excludeFolders.join(', '))
@@ -624,6 +624,56 @@ export default class MarkwhenSync extends Plugin {
 	// Use the imported Debouncer type with correct generic arguments
 	private debouncedHandleFileChange!: DebouncedFunc<[TFile], void>;
 
+	// Determine if a given path should be considered within the notes scope
+	private isPathInNotesScope(path: string): boolean {
+		const folder = (this.settings?.notesFolderPath || '').trim();
+		if (!folder) return true; // Blank means whole vault
+		return path.startsWith(folder + '/');
+	}
+
+	// Find a note file by event note name, honoring folder scope and avoiding ambiguity
+	private findNoteFileByName(noteName: string): TFile | null {
+		const folder = (this.settings?.notesFolderPath || '').trim();
+		if (folder) {
+			const notePath = `${folder}/${noteName}.md`;
+			const f = this.app.vault.getAbstractFileByPath(notePath);
+			return f instanceof TFile ? f : null;
+		}
+		// Whole vault: search by basename
+		const matches = this.app.vault.getMarkdownFiles().filter(f => f.basename === noteName);
+		if (matches.length === 1) return matches[0];
+		if (matches.length > 1) {
+			this.log('warn', `Multiple notes named "${noteName}" found in vault; skipping ambiguous update.`);
+		}
+		return null;
+	}
+
+	// Extract a header block from an existing Markwhen file (lines before first event/group)
+	private extractHeaderFromTimeline(content: string): string {
+		try {
+			const lines = content.split(/\r?\n/);
+			const groupStartTextLower = this.settings.formattingConfig.groupStartText.toLowerCase();
+			const groupEndTextLower = this.settings.formattingConfig.groupEndText.toLowerCase();
+			const eventLineRegex = /^(.*?):\s*\[\[(.*?)]](?:\s*(#[\w-]+))?\s*$/;
+
+			const headerLines: string[] = [];
+			for (let i = 0; i < lines.length; i++) {
+				const raw = lines[i];
+				const trimmed = raw.trim();
+				const lower = trimmed.toLowerCase();
+				const isEvent = eventLineRegex.test(trimmed);
+				const isGroupStart = lower.startsWith(groupStartTextLower + ' ');
+				const isGroupEnd = lower === groupEndTextLower;
+				if (isEvent || isGroupStart || isGroupEnd) break;
+				headerLines.push(raw);
+			}
+			return headerLines.join('\n').trim();
+		} catch (e) {
+			this.log('warn', 'Failed to extract header from timeline; proceeding without preserving header.', e);
+			return '';
+		}
+	}
+
 
 	async onload(): Promise<void> {
 		await this.loadSettings();
@@ -657,8 +707,8 @@ export default class MarkwhenSync extends Plugin {
 		);
 		this.registerEvent(
 			this.app.vault.on('create', (file) => {
-				 // Trigger sync if a markdown file is created within the notes folder
-				if (this.settings.enableAutoSync && file instanceof TFile && file.extension === 'md' && file.path.startsWith(this.settings.notesFolderPath + '/')) {
+				 // Trigger sync if a markdown file is created within the notes scope
+				if (this.settings.enableAutoSync && file instanceof TFile && file.extension === 'md' && this.isPathInNotesScope(file.path)) {
 					this.log('debug', `Note created (${file.path}), triggering sync to Markwhen.`);
 					// Use debounce here too if creation might trigger rapid modifications
 					this.syncToMarkwhen(); // Or use debounced version
@@ -669,7 +719,7 @@ export default class MarkwhenSync extends Plugin {
 			this.app.vault.on('delete', (file) => {
 				if (this.settings.enableAutoSync) {
 					// If a note file is deleted
-					if (file instanceof TFile && file.path.startsWith(this.settings.notesFolderPath + '/')) {
+					if (file instanceof TFile && this.isPathInNotesScope(file.path)) {
 						this.log('debug', `Note deleted (${file.path}), triggering sync to Markwhen.`);
 						// Trigger sync to remove deleted item from timeline
 						this.syncToMarkwhen(); // Sync immediately to reflect deletion
@@ -742,8 +792,8 @@ export default class MarkwhenSync extends Plugin {
 		if (file.path === this.settings.markwhenPath) {
 			this.log('debug', "Timeline file modified, syncing from Markwhen.");
 			await this.syncFromMarkwhen();
-		// Check if the file is a markdown file within the notes folder
-		} else if (file.path.startsWith(this.settings.notesFolderPath + '/') && file.extension === 'md') {
+		// Check if the file is a markdown file within the notes scope
+		} else if (this.isPathInNotesScope(file.path) && file.extension === 'md') {
 			 // Optional: Check mtime against last sync state to avoid redundant syncs
 			 // const lastMtime = this.lastSync.notes.get(file.path);
 			 // if (lastMtime === undefined || file.stat.mtime > lastMtime) {
@@ -795,27 +845,32 @@ export default class MarkwhenSync extends Plugin {
 	// Collect valid entries from the notes folder
 	private async collectEntries(): Promise<Entry[]> {
 		const entries: Entry[] = [];
-		const notesFolderPath = this.settings.notesFolderPath;
-		const notesFolder = this.app.vault.getAbstractFileByPath(notesFolderPath);
-
-		if (!(notesFolder instanceof TFolder)) {
-			const errorMsg = `Notes folder path "${notesFolderPath}" not found or is not a folder.`;
-			 this.log('error', errorMsg);
-			 if (this.settings.notificationConfig.showErrors) {
-				 new Notice(errorMsg);
-			 }
-			return []; // Return empty array
+		const notesFolderPathRaw = this.settings.notesFolderPath || '';
+		const notesFolderPath = notesFolderPathRaw.trim();
+		const includeAll = notesFolderPath === '';
+		let baseFolder: TFolder | null = null;
+		if (!includeAll) {
+			const af = this.app.vault.getAbstractFileByPath(notesFolderPath);
+			if (!(af instanceof TFolder)) {
+				const errorMsg = `Notes folder path "${notesFolderPath}" not found or is not a folder.`;
+				this.log('error', errorMsg);
+				if (this.settings.notificationConfig.showErrors) new Notice(errorMsg);
+				return [];
+			}
+			baseFolder = af;
 		}
 
-		const files = this.app.vault.getMarkdownFiles(); // Get all markdown files
+		const files = this.app.vault.getMarkdownFiles(); // All markdown files
 
 		for (const file of files) {
-			// Check if file is within the specified notes folder (ensure trailing slash for correct path check)
-			if (!file.path.startsWith(notesFolder.path + '/')) {
-				continue;
+			// Scope filter
+			if (!includeAll) {
+				if (!file.path.startsWith((baseFolder as TFolder).path + '/')) continue;
 			}
-			// Check if file is in an excluded subfolder
-			const relativePath = file.path.substring(notesFolder.path.length + 1); // Get path relative to notes folder
+			// Exclusions relative to scope root
+			const relativePath = includeAll
+				? file.path
+				: file.path.substring((baseFolder as TFolder).path.length + 1);
 			if (this.settings.filterConfig.excludeFolders.some(folder => relativePath.startsWith(folder + '/'))) {
 				this.log('debug', `Skipping excluded file: ${file.path}`);
 				continue;
@@ -941,8 +996,6 @@ export default class MarkwhenSync extends Plugin {
 	async syncToMarkwhen(): Promise<void> {
 		this.log('info', "Starting sync to Markwhen timeline.");
 		try {
-			const entries = await this.collectEntries();
-			const newContent = await this.generateTimelineContent(entries);
 			const timelinePath = this.settings.markwhenPath;
 
 			let markwhenFile = this.app.vault.getAbstractFileByPath(timelinePath);
@@ -961,8 +1014,10 @@ export default class MarkwhenSync extends Plugin {
 					}
 				}
 				 try {
-					markwhenFile = await this.app.vault.create(timelinePath, newContent.trim());
-					this.lastSync.timeline = newContent.trim(); // Update sync state
+					const entries = await this.collectEntries();
+					const newContentOnCreate = await this.generateTimelineContent(entries, undefined);
+					markwhenFile = await this.app.vault.create(timelinePath, newContentOnCreate.trim());
+					this.lastSync.timeline = newContentOnCreate.trim(); // Update sync state
 					if (this.settings.notificationConfig.enabled) {
 						new Notice(`Created timeline: ${timelinePath}`);
 					}
@@ -988,6 +1043,11 @@ export default class MarkwhenSync extends Plugin {
 				 }
 				return;
 			}
+
+			// Generate timeline content, preserving header from existing file if present and no explicit header setting
+			const preservedHeader = this.extractHeaderFromTimeline(currentContent);
+			const entries = await this.collectEntries();
+			const newContent = await this.generateTimelineContent(entries, preservedHeader);
 
 			// --- Write content only if it differs ---
 			if (newContent.trim() !== currentContent.trim()) {
@@ -1165,9 +1225,8 @@ export default class MarkwhenSync extends Plugin {
 	private async updateNoteFromEvent(event: TimelineEvent): Promise<boolean> {
 		if (!this.settings.enableBidirectionalSync) return false;
 
-		// Construct the potential note path
-		const notePath = `${this.settings.notesFolderPath}/${event.noteName}.md`;
-		const noteFile = this.app.vault.getAbstractFileByPath(notePath);
+		// Find the note file in scope
+		const noteFile = this.findNoteFileByName(event.noteName);
 
 		if (!(noteFile instanceof TFile)) {
 			 // this.log('debug', `Note file not found for event "${event.noteName}", skipping update.`); // Less verbose
@@ -1175,10 +1234,10 @@ export default class MarkwhenSync extends Plugin {
 		}
 
 		// --- Crucial Check: Ensure event dates are valid before proceeding ---
-		// Dates should be in 'YYYY-MM-DD' format by now
+		const df = this.settings.formattingConfig.dateFormat;
 		if (!event.startDate || !event.endDate ||
-			!window.moment(event.startDate, 'YYYY-MM-DD', true).isValid() ||
-			!window.moment(event.endDate, 'YYYY-MM-DD', true).isValid())
+			!window.moment(event.startDate, df, true).isValid() ||
+			!window.moment(event.endDate, df, true).isValid())
 		{
 			this.log('warn', `Skipping update for "${event.noteName}" because event dates are invalid or missing after parsing. Start: ${event.startDate}, End: ${event.endDate}`);
 			return false;
@@ -1244,7 +1303,7 @@ export default class MarkwhenSync extends Plugin {
 			return updateMade;
 
 		} catch (error: any) {
-			this.log('error', `Error updating note "${notePath}" using processFrontMatter:`, error);
+			this.log('error', `Error updating note for event "${event.noteName}" using processFrontMatter:`, error);
 			if (this.settings.notificationConfig.showErrors) {
 				new Notice(`Error updating note ${event.noteName}: ${error.message || 'Unknown error'}`);
 			}
@@ -1253,12 +1312,11 @@ export default class MarkwhenSync extends Plugin {
 	}
 
 	// Generate the content for the Markwhen timeline file from entries
-	private async generateTimelineContent(entries: Entry[]): Promise<string> {
+	private async generateTimelineContent(entries: Entry[], headerFromFile?: string): Promise<string> {
 		let content = '';
-		const header = this.settings.timelineHeader || '';
-		if (header) {
-			content += header.trim() + '\n\n';
-		}
+		const headerSetting = (this.settings.timelineHeader || '').trim();
+		const header = headerSetting !== '' ? headerSetting : (headerFromFile ? headerFromFile.trim() : '');
+		if (header) content += header + '\n\n';
 
 		if (this.settings.groupingConfig.enabled) {
 			const grouped = this.groupEntries(entries); // Grouping doesn't need to be async

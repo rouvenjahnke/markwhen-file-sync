@@ -21,7 +21,7 @@ A possible use case is goal planning, where you can visualize projects and miles
 
 ## Settings
 1. Set the *timeline file path* to the path to the markwhen-timeline (include .mw)
-2. Set the *notes folder path* to the path to the folder in which you have your notes, which you want to synchronize with the Markwhen-Timeline-File.
+2. Set the *notes folder path* to the path to the folder in which you have your notes, which you want to synchronize with the Markwhen-Timeline-File. Leave this blank to sync the entire vault.
 3. Enable or disable the bidirectional synchronization.
    - if you enable it, then the *date* and *endDate* will synchronize from the notes to the timeline and the opposite direction
    - if you disable it, then the synchronization will synchronize only from tthe notes to the timeline
@@ -33,6 +33,10 @@ A possible use case is goal planning, where you can visualize projects and miles
 **The format of the properties for the dates in the notes are based on the format from *Full Calendar*, so the start-date is: *date* and the end-date is: *endDate*.**
 
 *The other settings are less important and should be self-explanatory*
+
+Notes:
+- The plugin preserves an existing header block at the top of your Markwhen file. If you set a Header in settings, that value is used; otherwise the existing header is kept.
+- Timeline events with month-only or year-only dates (e.g., `2025-06` or `2025`) are supported; the plugin expands these to the start/end of the corresponding month/year according to your configured date format.
 
 ## Usage
 To use the synchronization you have to create notes in the notes-folder. For example:
